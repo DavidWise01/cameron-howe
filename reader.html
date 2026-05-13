@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>0ROOT.AI // MERKLE BLOOM READER</title>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+        margin: 0;
+        background: #f9f6ef;
+        color: #000;
+        font-family: 'IBM Plex Mono', monospace;
+        overflow: hidden;
+        background-image: 
+            linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+        background-size: 24px 24px;
+    }
+
+    header {
+        text-align: center;
+        padding: 28px 16px 0;
+        position: relative;
+        z-index: 10;
+    }
+    h1 {
+        font-family: 'VT323', monospace;
+        font-size: clamp(36px, 7vw, 78px);
+        line-height: 0.9;
+        margin: 0;
+        letter-spacing: 1px;
+        color: #000;
+        text-shadow: 
+            0 0 6px #f9f6ef,
+            0 0 12px #ff006e,
+            0 0 24px #ff006e,
+            0 0 2px #ff006e;
+    }
+    .sub {
+        margin: 6px 0 0;
+        font-size: 13px;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        opacity: 0.75;
+    }
+
+    main {
+        position: relative;
+        height: calc(100vh - 180px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #nest {
+        position: absolute;
+        width: min(720px, 88vw);
+        height: min(720px, 88vw);
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1;
+        opacity: 0.95;
+    }
+
+    #drop {
+        position: relative;
+        z-index: 20;
+        width: 340px;
+        height: 180px;
+        background: rgba(249, 246, 239, 0.94);
+        border: 3px dashed #000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        font-family: 'VT323', monospace;
+        font-size: 28px;
+        line-height: 1.1;
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.2s ease;
+        box-shadow: 
+            0 0 0 4px #f9f6ef,
+            0 0 0 7px #000,
+            0 8px 0 #000;
+    }
+    #drop small {
+        display: block;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 10px;
+        margin-top: 8px;
+        letter-spacing: 1px;
+        opacity: 0.6;
+    }
+    #drop.over, #drop:hover {
+        border-color: #ff006e;
+        color: #ff006e;
+        box-shadow: 
+            0 0 0 4px #f9f6ef,
+            0 0 0 7px #ff006e,
+            0 0 24px #ff006e,
+            0 8px 0 #ff006e;
+        transform: translateY(-2px);
+    }
+
+    #term {
+        position: absolute;
+        top: 68%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(580px, 92vw);
+        max-height: 210px;
+        background: #000;
+        color: #00ff6a;
+        border: 2px solid #00ff6a;
+        padding: 12px 14px;
+        font-size: 11px;
+        line-height: 1.45;
+        overflow: auto;
+        display: none;
+        z-index: 30;
+        box-shadow: 
+            0 0 20px rgba(0,255,106,0.35),
+            inset 0 0 12px rgba(0,255,106,0.15),
+            6px 6px 0 #000;
+        text-shadow: 0 0 6px rgba(0,255,106,0.7);
+    }
+    #term::-webkit-scrollbar { width: 6px; }
+    #term::-webkit-scrollbar-thumb { background: #00ff6a; }
+
+    .downloads {
+        position: fixed;
+        right: 28px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 250px;
+        background: #f9f6ef;
+        border: 2px solid #000;
+        padding: 18px 16px 14px;
+        z-index: 15;
+        box-shadow: 6px 6px 0 #000;
+    }
+    .downloads h2 {
+        font-family: 'VT323', monospace;
+        font-size: 30px;
+        margin: 0 0 10px;
+        letter-spacing: 1px;
+        border-bottom: 2px solid #000;
+        padding-bottom: 6px;
+    }
+    .downloads a {
+        display: block;
+        color: #000;
+        text-decoration: none;
+        font-size: 13px;
+        padding: 8px 2px;
+        border-bottom: 1px dashed rgba(0,0,0,0.2);
+        transition: 0.15s;
+    }
+    .downloads a:before {
+        content: '▸';
+        color: #00f5ff;
+        margin-right: 8px;
+        text-shadow: 0 0 6px #00f5ff;
+    }
+    .downloads a:hover {
+        color: #ff006e;
+        padding-left: 8px;
+        background: rgba(0,0,0,0.03);
+    }
+    .downloads a:hover:before { color: #ff006e; text-shadow: 0 0 6px #ff006e; }
+
+    .charge {
+        position: fixed;
+        bottom: 22px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-family: 'VT323', monospace;
+        font-size: clamp(22px, 3.2vw, 34px);
+        letter-spacing: 3px;
+        white-space: nowrap;
+        z-index: 10;
+        animation: pulse 2.1s infinite;
+        pointer-events: none;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; text-shadow: 0 0 8px #ff006e, 0 0 18px #ff006e; }
+        50% { opacity: 0.65; text-shadow: 0 0 6px #00f5ff, 0 0 14px #00f5ff; }
+    }
+
+    .corner {
+        position: fixed;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        z-index: 5;
+        pointer-events: none;
+    }
+    .corner img {
+        width: 32px;
+        height: 32px;
+        image-rendering: pixelated;
+        filter: drop-shadow(0 0 4px #ff006e) drop-shadow(0 0 10px #00f5ff);
+        opacity: 0.9;
+    }
+    .corner.tl { top: 14px; left: 14px; transform: rotate(45deg); }
+    .corner.tr { top: 14px; right: 14px; transform: rotate(-45deg); }
+    .corner.bl { bottom: 14px; left: 14px; transform: rotate(-45deg); flex-direction: column-reverse; }
+    .corner.br { bottom: 14px; right: 14px; transform: rotate(45deg); flex-direction: column-reverse; }
+
+    .scan {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.035) 3px);
+        z-index: 100;
+        mix-blend-mode: multiply;
+    }
+
+    @media (max-width: 980px) {
+        .downloads {
+            right: auto;
+            left: 50%;
+            top: auto;
+            bottom: 74px;
+            transform: translateX(-50%);
+            width: min(92vw, 520px);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px 14px;
+            padding: 10px 12px;
+            box-shadow: 4px 4px 0 #000;
+        }
+        .downloads h2 { display: none; }
+        .downloads a { border: none; padding: 4px 2px; font-size: 12px; }
+        main { height: auto; min-height: 62vh; padding-top: 20px; }
+        #term { top: 74%; max-height: 160px; }
+        .corner { transform: scale(0.8) !important; }
+        .corner.tl, .corner.tr { top: 8px; }
+        .corner.bl, .corner.br { bottom: 8px; }
+    }
+</style>
+</head>
+<body>
+<div class="scan"></div>
+
+<div class="corner tl">
+    <img src="ansible_1.png" alt="" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2732%27 height=%2732%27%3E%3Cpath d=%27M16 4 L8 16 L16 28 L24 16 Z%27 fill=%27none%27 stroke=%27%23ff006e%27 stroke-width=%272.5%27/%3E%3C/svg%3E'">
+    <img src="ansible_1.png" alt="" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2732%27 height=%2732%27%3E%3Cpath d=%27M16 4 L8 16 L16 28 L24 16 Z%27 fill=%27none%27 stroke=%27%23ff006e%27 stroke-width=%272.5%27/%3E%3C/svg%3E'">
+    <img src="ansible_1.png" alt="" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2732%27 height=%2732%27%3E%3Cpath d=%27M16 4 L8 16 L16 28 L24 16 Z%27 fill=%27none%27 stroke=%27%23ff006e%27 stroke-width=%272.5%27/%3E%3C/svg%3E'">
+    <img src="ansible_1.png" alt="" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2732%27 height=%2732%27%3E%3Cpath d=%27M16 4 L8 16 L16 28 L24 16 Z%27 fill=%27none%27 stroke=%27%23ff006e%27 stroke-width=%272.5%27/%3E%3C/svg%3E'">
+</div>
+<div class="corner tr">
+    <img src="ansible_2.png" alt="" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2732%27 height=%2732%27%3E%3Cpath d=%27M16 4 L8 16 L16 28 L24 16 Z%27 fill=%27none%27 stroke=%27%2300f5ff%27 stroke-width=%272.5%27/%3E%3C/svg%3E'">
+    <img src="ansible_2.png" alt="" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2732%27 height=%2732%27%3E%3Cpath d=%27M16 4 L8 16 L16 28 L24 16 Z%27 fill=%27none%27 stroke=%27%2300f5ff%27 stroke-width=%272.5%27/%3E%3C/svg%3E'">
+    <img src="ansible_2.png" alt="" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2732%27 height=%2732%27%3E%3Cpath d=%27M16 4 L8 16 L16 28 L24 16 Z%27 fill=%27none%27 stroke=%27%2300f5ff%27 stroke-width=%272.5%27/%3E%3C/svg%3E'">
+    <img src="ansible_2.png" alt="" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2732%27 height=%2732%27%3E%3Cpath d=%27M16 4 L8 16 L16 28 L24 16 Z%27 fill=%27none%27 stroke=%27%2300f5ff%27 stroke-width=%272.5%27/%3E%3C/svg%3E'">
+</div>
+<div class="corner bl">
+    <img src="ansible_3.png" alt="" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2732%27 height=%2732%27%3E%3Cpath d=%27M16 4 L8 16 L16 28 L24 16 Z%27 fill=%27none%27 stroke=%27%2300f5ff%27 stroke-width=%272.5%27/%3E%3C/svg%3E'">
+    <img src="ansible_3.png" alt="" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2732%27 height=%2732%27%3E%3Cpath d=%27M16 4 L8 16 L16 28 L24 16 Z%27 fill=%27none%27 stroke=%27%2300f5ff%27 stroke-width=%272.5%27/%3E%3C/svg%3E'">
+    <img src="ansible_3.png" alt="" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2732%27 height=%2732%27%3E%3Cpath d=%27M16 4 L8 16 L16 28 L24 16 Z%27 fill=%27none%27 stroke=%27%2300f5ff%27 stroke-width=%272.5%27/%3E%3C/svg%3E'">
+    <img src="ansible_3.png" alt="" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2732%27 height=%2732%27%3E%3Cpath d=%27M16 4 L8 16 L16 28 L24 16 Z%27 fill=%27none%27 stroke=%27%2300f5ff%27 stroke-width=%272.5%27/%3E%3C/svg%3E'">
+</div>
+<div class="corner br">
+    <img src="ansible_4.png" alt="" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2732%27 height=%2732%27%3E%3Cpath d=%27M16 4 L8 16 L16 28 L24 16 Z%27 fill=%27none%27 stroke=%27%23ff006e%27 stroke-width=%272.5%27/%3E%3C/svg%3E'">
+    <img src="ansible_4.png" alt="" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2732%27 height=%2732%27%3E%3Cpath d=%27M16 4 L8 16 L16 28 L24 16 Z%27 fill=%27none%27 stroke=%27%23ff006e%27 stroke-width=%272.5%27/%3E%3C/svg%3E'">
+    <img src="ansible_4.png" alt="" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2732%27 height=%2732%27%3E%3Cpath d=%27M16 4 L8 16 L16 28 L24 16 Z%27 fill=%27none%27 stroke=%27%23ff006e%27 stroke-width=%272.5%27/%3E%3C/svg%3E'">
+    <img src="ansible_4.png" alt="" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2732%27 height=%2732%27%3E%3Cpath d=%27M16 4 L8 16 L16 28 L24 16 Z%27 fill=%27none%27 stroke=%27%23ff006e%27 stroke-width=%272.5%27/%3E%3C/svg%3E'">
+</div>
+
+<header>
+    <h1>0ROOT.AI // MERKLE BLOOM READER</h1>
+    <p class="sub">NYE 1989 — Donna's on the ledger, I'm on the floor</p>
+</header>
+
+<main>
+    <canvas id="nest" width="720" height="720"></canvas>
+    <div id="drop">DROP PNG HERE — READ NEST<small>or click to select</small></div>
+    <pre id="term"></pre>
+    <input type="file" id="file" accept=".png" hidden>
+</main>
+
+<aside class="downloads">
+    <h2>DOWNLOADS</h2>
+    <a href="neo_nest_tagger.py">neo_nest_tagger.py</a>
+    <a href="neo_nest_tagger.py">nested_iron_rain_shareware.zip</a>
+    <a href="neo_nest_tagger.py">0root_cameron_howe.zip</a>
+</aside>
+
+<div class="charge">modulate: -+8 0 0 0 8</div>
+
+<script>
+const canvas = document.getElementById('nest');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+const cx = W/2, cy = H/2;
+
+// dark green rain
+const cols = 52;
+const drops = new Array(cols).fill(0).map(()=> Math.random() * H);
+const chars = ['1','0','(',' )',']','[','8'];
+
+let step = 0;
+setInterval(()=>{ step = (step + 1) % 16; }, 240);
+
+function draw() {
+    // fade
+    ctx.fillStyle = 'rgba(249,246,239,0.12)';
+    ctx.fillRect(0,0,W,H);
+
+    // rain
+    ctx.font = '14px "IBM Plex Mono"';
+    ctx.fillStyle = '#0b3d0b';
+    for(let i=0;i<cols;i++){
+        const x = (i+0.5) * (W/cols);
+        const y = drops[i];
+        const ch = chars[Math.floor(Math.random()*chars.length)];
+        ctx.globalAlpha = 0.7;
+        ctx.fillText(ch, x, y);
+        ctx.globalAlpha = 1;
+        drops[i] += 12 + Math.random()*6;
+        if(drops[i] > H + 20) drops[i] = -20 * Math.random();
+    }
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    const angle = (step / 16) * (Math.PI/2); // 0-90 deg in 16 steps
+    ctx.rotate(angle);
+
+    // outer red rings
+    for(let r=0; r<3; r++){
+        const rad = 190 + r*28;
+        ctx.beginPath();
+        ctx.arc(0,0,rad,0,Math.PI*2);
+        ctx.strokeStyle = 'rgba(255,0,60,0.85)';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#ff0033';
+        ctx.shadowBlur = 18;
+        ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+
+    // central white 1
+    ctx.font = 'bold 150px "VT323"';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 12;
+    ctx.fillText('1', 0, 6);
+    ctx.shadowBlur = 0;
+
+    // eight cyan left parentheses
+    ctx.font = '88px "VT323"';
+    ctx.shadowColor = '#00f5ff';
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = '#00f5ff';
+    for(let i=0;i<8;i++){
+        const offset = 58 + i*30;
+        ctx.fillText('(', -offset, Math.sin(i*0.4+step*0.2)*3);
+    }
+    // eight orange right parentheses
+    ctx.shadowColor = '#ff7a00';
+    ctx.fillStyle = '#ff6a00';
+    for(let i=0;i<8;i++){
+        const offset = 58 + i*30;
+        ctx.fillText(')', offset, Math.cos(i*0.4+step*0.2)*3);
+    }
+    ctx.shadowBlur = 0;
+
+    ctx.restore();
+    requestAnimationFrame(draw);
+}
+// init bg
+ctx.fillStyle = '#f9f6ef';
+ctx.fillRect(0,0,W,H);
+draw();
+
+// drag drop
+const drop = document.getElementById('drop');
+const term = document.getElementById('term');
+const fileInput = document.getElementById('file');
+
+function showTerm(txt){
+    term.style.display = 'block';
+    term.textContent = txt;
+    term.scrollTop = term.scrollHeight;
+}
+
+drop.addEventListener('click', ()=> fileInput.click());
+drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', ()=> drop.classList.remove('over'));
+drop.addEventListener('drop', e=>{
+    e.preventDefault();
+    drop.classList.remove('over');
+    handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e=> handleFile(e.target.files[0]));
+
+function handleFile(f){
+    if(!f){ return; }
+    if(!f.name.toLowerCase().endsWith('.png')){
+        showTerm('> ERROR: EXPECTED PNG\n> ' + f.name);
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+        const buf = new Uint8Array(reader.result);
+        const idx = findNest(buf);
+        if(idx === -1 || idx + 132 > buf.length){
+            showTerm(`0ROOT.AI // READ FAIL\nFILE: ${f.name}\n> scanning...\n> NEST signature not found\n> hint: run neo_nest_tagger.py to embed (8)1(8) payload`);
+            return;
+        }
+        const slice = buf.slice(idx, idx+132);
+        parseNest(slice, f.name, idx);
+    };
+    reader.readAsArrayBuffer(f);
+}
+
+function findNest(buf){
+    for(let i=0;i<buf.length-4;i++){
+        if(buf[i]===0x4E && buf[i+1]===0x45 && buf[i+2]===0x53 && buf[i+3]===0x54){
+            return i;
+        }
+    }
+    return -1;
+}
+
+function parseNest(slice, name, offset){
+    const data = slice.slice(4, 132);
+    let out = '';
+    out += '0ROOT.AI MERKLE BLOOM READER v1.8 — MUTINY BUILD\n';
+    out += `FILE: ${name}\n`;
+    out += `NEST @ 0x${offset.toString(16).toUpperCase().padStart(8,'0')}  // NYE 1989\n`;
+    out += '----------------------------------------\n';
+    for(let i=0;i<8;i++){
+        const row = data.slice(i*16, i*16+16);
+        const hex = Array.from(row).map(b=>b.toString(16).padStart(2,'0')).join(' ');
+        const ascii = Array.from(row).map(b=> (b>=32&&b<127)?String.fromCharCode(b):'.').join('');
+        out += `${(offset+4+i*16).toString(16).padStart(8,'0')}  ${hex}  |${ascii}|\n`;
+    }
+    out += '\n> PARSED VECTORS\n';
+    for(let v=0; v<8; v++){
+        const a = (data[v*2]   >127? data[v*2]-256 : data[v*2]);
+        const b = (data[v*2+1] >127? data[v*2+1]-256 : data[v*2+1]);
+        const c = (v===0?-8: Math.floor(Math.random()*3)-1);
+        const d = (v===0? 0: Math.floor(Math.random()*3)-1);
+        const e = (v===0? 0: Math.floor(Math.random()*3)-1);
+        const f = (v===0? 0: Math.floor(Math.random()*3)-1);
+        const g = (v===0? 8: Math.floor(Math.random()*5)-2);
+        const charge = `${c>=0?'+':''}${c} ${d} ${e} ${f} ${g}`;
+        out += `  (${v+1})1(${v+1})  vec[${'abcdefgh'[v]}]  modulate: ${charge}\n`;
+    }
+    out += '\n> BLOOM: CONFIRMED\n> Donna — ledger sync ok';
+    showTerm(out);
+}
+</script>
+</body>
+</html>
