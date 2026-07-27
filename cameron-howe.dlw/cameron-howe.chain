@@ -1,9 +1,9 @@
 ROOT0-DLW-CHAIN-v1
 index : 1308
 slug  : cameron-howe
-seal  : 88b61f22367061083c28ac1fe988119bf7a7853cfacb230eaab3e80f3550c879
-prev  : 2ef202d991bbacd37db2acb58756a41b385e63928c5afec6e2cccbbf773a3069
-link  : 5716d139f3a659b8e57f8cccde0ec3e88e856185b64f0e07a3c0fc5ebd462a5e
-head  : f7444724835fd968bd2eac85811f9fa823a18d20a57907b4fade8d96b70b5409
+seal  : 76e890ef81b762b5b53b56815e6fe30735f5752e2e19810e236c20a8e5b90fdd
+prev  : cf032ecf830cb0b0eb3646699eb6c2d66488f3af5e7dd54e8cc5da2cd6e164b2
+link  : 7c1dd3cdba254529935b27a0dbc9675d3f92a65cc4fa678015db3250a68b8e14
+head  : c4d41afeaef76470528856d54d86cf480a0e1c2fc8ebc60fbb9eb8e442585f2b
 
 — the tether: link = sha256(index|slug|seal|prev). the chain head commits to the whole corpus.
